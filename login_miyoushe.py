@@ -1,4 +1,5 @@
 import json
+import time
 from json.decoder import JSONDecodeError
 
 import requests
@@ -15,15 +16,15 @@ from log_config import log
 def get_permit_cookie() -> dict:
     """获取米哈游通行证的cookie"""
     log.info('正在启动Edge浏览器...')
-    wd = webdriver.Edge(service=Service(r'./msedgedriver.exe'))
+    edge_options = webdriver.EdgeOptions()
+    edge_options.add_experimental_option('excludeSwitches', ['enable-automation', 'enable-logging'])
+    wd = webdriver.Edge(service=Service(r'./msedgedriver.exe'), options=edge_options)
     wd.get('https://user.mihoyo.com/')
     log.info('浏览器启动成功，请登录米哈游通行证...')
-    # 检测网页上是否还有“登录”按钮
-    wait = WebDriverWait(wd, 1)
+    # 检测用户是否登录了
     while True:
-        try:
-            wait.until(expected_conditions.visibility_of_element_located((By.CLASS_NAME, 'login-btn')))
-        except:
+        time.sleep(1)
+        if wd.current_url == 'https://user.mihoyo.com/#/account/home':
             break
     web_cookie = wd.get_cookies()
     wd.quit()

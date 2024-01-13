@@ -13,7 +13,7 @@ salt_6X = 't0qEgfub6cvueAPgR5m9aQWWVciEer7v'  # 这个给签到用
 client_type = '2'  # 1:ios 2:android
 
 
-# URL
+# 米游社API
 stokenUrl = 'https://api-takumi.mihoyo.com/auth/api/getMultiTokenByLoginTicket?login_ticket={}&token_types=3&uid={}'
 """获取stoken URL"""
 
