@@ -5,9 +5,6 @@ from json.decoder import JSONDecodeError
 import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.support.ui import WebDriverWait
 
 from common import stokenUrl, get_Nickname, print_blank_line
 from log_config import log
@@ -39,9 +36,9 @@ def get_permit_cookie() -> dict:
 def get_user_info(permit_cookie) -> dict:
     """通过米哈游通行证cookie获取用户信息"""
     log.info('获取用户信息中...')
-    user_info = {'stuid': permit_cookie['account_id']}
-    res = requests.get(url=stokenUrl.format(permit_cookie['login_ticket'], user_info['stuid']))
-    data = json.loads(res.text.encode('utf-8'))
+    user_info = {'stuid': permit_cookie['login_uid']}
+    resp = requests.get(url=stokenUrl.format(permit_cookie['login_ticket'], user_info['stuid']))
+    data = json.loads(resp.text.encode('utf-8'))
     if data['retcode'] == 0:
         user_info['stoken'] = data['data']['list'][0]['token']
         log.info('用户信息获取成功！')
@@ -82,6 +79,7 @@ def save_user_info(info) -> list[dict]:
     cookie_repeated = False
     if len(data):
         log.info('文件“user_info”原内容读取完毕！')
+        log.info(f'正在添加【{nickname}】的用户信息...')
         for i in range(len(data)):
             if data[i]['stuid'] == info['stuid']:
                 log.info(f'发现用户[{nickname}]已存在，正在更新该用户信息...')
@@ -97,7 +95,7 @@ def save_user_info(info) -> list[dict]:
     return data
 
 
-def main() -> list[dict]:
+def login_and_save() -> list[dict]:
     permit_cookie = get_permit_cookie()
     print_blank_line()
     user_ck = get_user_info(permit_cookie)
@@ -107,7 +105,7 @@ def main() -> list[dict]:
 
 if __name__ == '__main__':
     try:
-        main()
+        login_and_save()
         print_blank_line()
         input('程序正常结束，按回车键退出：')
     except RuntimeError:
