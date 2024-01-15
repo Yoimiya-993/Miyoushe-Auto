@@ -20,5 +20,5 @@
 2. 按快捷键“Win + R”打开运行对话框，在其中输入“shell:startup”（不含引号）并按下回车键
 ![open-startup.png](docs/open-startup.png)
 3. 在弹出的窗口中，将第1步创建的快捷方式拖入其中
-![move-shortcut-to-startup.png](docs/move-shortcut-to-startup.png)
+![move-shortcut-to-startup.png](docs/move-shortcut-to-startup.png)  
 此时可以重启电脑验证下自启动项是否配置成功
