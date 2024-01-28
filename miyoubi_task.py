@@ -2,7 +2,7 @@ from json.decoder import JSONDecodeError
 
 from common import *
 from log_config import log
-from login_miyoushe import main as login_account
+from add_account import login_and_save
 
 
 def load_user() -> list[dict]:
@@ -15,7 +15,7 @@ def load_user() -> list[dict]:
             return data
     except FileNotFoundError:
         log.info('”user_info“文件不存在，请添加第一个账号...')
-        users = login_account()
+        users = login_and_save()
         log.info('账号添加成功！')
         return users
     except JSONDecodeError:
@@ -52,8 +52,8 @@ class MiYouBiTask:
     def verifyStoken(self):
         """验证stoken的有效性"""
         log.info(f'正在验证用户[{self.nickname}]的登录状态...')
-        res = requests.get(url=verifyUrl, cookies=self.user)
-        data = json.loads(res.text.encode('utf-8'))
+        resp = requests.get(url=verifyUrl, cookies=self.user)
+        data = json.loads(resp.text.encode('utf-8'))
         if data['retcode'] == -100:
             log.error(f'[{self.nickname}]的{data["message"]}')
             raise RuntimeError
@@ -68,8 +68,8 @@ class MiYouBiTask:
         """
         articles = []
         log.info('正在获取5个【大别野】的帖子...')
-        res = requests.get(url=listUrl.format(self.da_bie_ye['forumId']), headers=self.headers)
-        data = json.loads(res.text.encode('utf-8'))
+        resp = requests.get(url=listUrl.format(self.da_bie_ye['forumId']), headers=self.headers)
+        data = json.loads(resp.text.encode('utf-8'))
         if data['retcode'] == 0:
             for i in range(5):
                 articles.append({
@@ -87,9 +87,9 @@ class MiYouBiTask:
         """浏览3个【大别野】帖子"""
         log.info('正在看帖...')
         for i in range(3):
-            res = requests.get(url=detailUrl.format(self.articleList[i]['post_id']),
+            resp = requests.get(url=detailUrl.format(self.articleList[i]['post_id']),
                                cookies=self.user, headers=self.headers)
-            data = json.loads(res.text.encode('utf-8'))
+            data = json.loads(resp.text.encode('utf-8'))
             if data['retcode'] == 0:
                 log.info(f'看帖《{self.articleList[i]["subject"]}》成功！')
             else:
@@ -101,9 +101,9 @@ class MiYouBiTask:
         """给5个【大别野】帖子点赞"""
         log.info('正在点赞...')
         for i in range(5):
-            res = requests.post(url=voteUrl, cookies=self.user, headers=self.headers,
+            resp = requests.post(url=voteUrl, cookies=self.user, headers=self.headers,
                                 json={'post_id': self.articleList[i]['post_id'], 'is_cancel': False})
-            data = json.loads(res.text.encode('utf-8'))
+            data = json.loads(resp.text.encode('utf-8'))
             if data['retcode'] == 0:
                 log.info(f'点赞《{self.articleList[i]["subject"]}》成功！')
             else:
@@ -133,6 +133,8 @@ class MiYouBiTask:
         data = json.loads(req.text.encode('utf-8'))
         if data['retcode'] == 0:
             log.info(f'【{self.da_bie_ye["name"]}】打卡成功！')
+        elif data['retcode'] == 1034:
+            log.error(f'【{self.da_bie_ye["name"]}】打卡失败，原因：遇到验证码，请使用米游社手动打卡')
         else:
             log.error(f'【{self.da_bie_ye["name"]}】打卡失败，原因：{data["message"]}')
             raise RuntimeError
