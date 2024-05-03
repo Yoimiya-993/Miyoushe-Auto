@@ -1,3 +1,4 @@
+import os
 import json
 import time
 import httpx
@@ -5,7 +6,7 @@ from json.decoder import JSONDecodeError
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import NoSuchDriverException, SessionNotCreatedException
-from common import stokenUrl, get_Nickname, print_blank_line
+from common import stokenUrl, get_Nickname, print_blank_line_and_delay
 from log_config import log
 
 
@@ -85,6 +86,8 @@ def save_user_info(info) -> list[dict]:
                 break
     if not cookie_repeated:
         data.append(info)
+    if not os.path.exists('./data'):
+        os.mkdir('./data')
     with open('./data/user_info.json', 'w') as f:
         json.dump(data, f)
     log.info('保存成功！')
@@ -94,9 +97,9 @@ def save_user_info(info) -> list[dict]:
 def login_and_save() -> list[dict]:
     try:
         permit_cookie = get_permit_cookie()
-        print_blank_line()
+        print_blank_line_and_delay()
         user_ck = get_user_info(permit_cookie)
-        print_blank_line()
+        print_blank_line_and_delay()
         return save_user_info(user_ck)
     except NoSuchDriverException:
         log.error('缺失msedgedriver.exe文件')
@@ -107,8 +110,8 @@ def login_and_save() -> list[dict]:
 if __name__ == '__main__':
     try:
         login_and_save()
-        print_blank_line()
+        print_blank_line_and_delay()
         input('程序正常结束，按回车键退出：')
     except RuntimeError:
-        print_blank_line()
+        print_blank_line_and_delay()
         input('程序遇到错误，请阅读上方红色红字提示后按回车键终止程序：')

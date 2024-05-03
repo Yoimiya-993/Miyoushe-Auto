@@ -142,10 +142,10 @@ class MiYouBiTask:
 
 def do_myb_task():
     user_list = load_user()
-    print_blank_line()
+    print_blank_line_and_delay()
     log.info('开始执行米游币任务...')
     for i in range(len(user_list)):
-        print_blank_line()
+        print_blank_line_and_delay()
         log.warning(f'==开始第{i+1}个账号的米游币任务==')
         myb_task = MiYouBiTask(user_list[i])
         myb_task.readArticle()
@@ -157,8 +157,8 @@ def do_myb_task():
 if __name__ == '__main__':
     try:
         do_myb_task()
-        print_blank_line()
+        print_blank_line_and_delay()
         input('米游币任务已全部执行完毕，请核对以上日志信息，确认无误按回车键退出：')
     except RuntimeError:
-        print_blank_line()
+        print_blank_line_and_delay()
         input('程序遇到错误，请阅读上方红色红字提示后按回车键终止程序：')

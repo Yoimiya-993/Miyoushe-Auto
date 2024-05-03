@@ -130,7 +130,7 @@ def get_Nickname(stuid: str) -> str:
         raise RuntimeError
 
 
-def print_blank_line():
+def print_blank_line_and_delay():
     """打印空行，用于日志信息间的分隔
 
     [修复] 日志信息会和相邻的print/input语句显示在同一行的问题
