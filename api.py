@@ -1,6 +1,6 @@
 import time
 import random
-import httpx
+import requests
 from hashlib import md5
 from log_config import log
 
@@ -90,9 +90,6 @@ channelList = [
 """
 
 
-##########################################################################################################
-
-
 def random_str(num):
     """生成指定位数的随机字符串"""
     letters_and_numbers = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
@@ -119,23 +116,12 @@ def get_DS2(body: str = '', query: str = '') -> str:
     return f'{t},{r},{ds}'
 
 
-def get_Nickname(stuid: str) -> str:
+def get_nickname(stuid: str) -> str:
     """获取米游社昵称"""
-    resp = httpx.get(url=nicknameUrl.format(stuid))
+    resp = requests.get(url=nicknameUrl.format(stuid))
     data = resp.json()
     if data['retcode'] == 0:
         return data['data']['user_info']['nickname']
     else:
         log.error(f'米游社昵称获取失败，原因：{data["message"]}')
         raise RuntimeError
-
-
-def print_blank_line_and_delay():
-    """打印空行，用于日志信息间的分隔
-
-    [修复] 日志信息会和相邻的print/input语句显示在同一行的问题
-    [优化] 不同函数/方法、每次循环打印的日志间空一行，避免密密麻麻连成一片很难看
-    """
-    time.sleep(0.5)
-    print()
-    time.sleep(0.5)

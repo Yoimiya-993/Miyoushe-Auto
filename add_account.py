@@ -1,12 +1,13 @@
 import os
 import json
 import time
-import httpx
+import requests
+import tools
+import api
 from json.decoder import JSONDecodeError
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.common.exceptions import NoSuchDriverException, SessionNotCreatedException
-from common import stokenUrl, get_Nickname, print_blank_line_and_delay
 from log_config import log
 
 
@@ -34,7 +35,7 @@ def get_user_info(permit_cookie) -> dict:
     """通过米哈游通行证cookie获取用户信息"""
     log.info('获取用户信息中...')
     user_info = {'stuid': permit_cookie['login_uid']}
-    resp = httpx.get(url=stokenUrl.format(permit_cookie['login_ticket'], user_info['stuid']))
+    resp = requests.get(url=api.stokenUrl.format(permit_cookie['login_ticket'], user_info['stuid']))
     data = resp.json()
     if data['retcode'] == 0:
         user_info['stoken'] = data['data']['list'][0]['token']
@@ -61,7 +62,7 @@ def save_user_info(info) -> list[dict]:
                     2.2.2 有添加过（说明原stoken失效，用户在重新登录以更新stoken）：
                         更新用户->保存文件->结束
     """
-    nickname = get_Nickname(info['stuid'])
+    nickname = api.get_nickname(info['stuid'])
     log.info(f'正在将【{nickname}】的用户信息保存到“user_info”文件...')
     data = []
     try:
@@ -97,9 +98,9 @@ def save_user_info(info) -> list[dict]:
 def login_and_save() -> list[dict]:
     try:
         permit_cookie = get_permit_cookie()
-        print_blank_line_and_delay()
+        tools.print_blank_line_and_delay()
         user_ck = get_user_info(permit_cookie)
-        print_blank_line_and_delay()
+        tools.print_blank_line_and_delay()
         return save_user_info(user_ck)
     except NoSuchDriverException:
         log.error('缺失msedgedriver.exe文件')
@@ -110,8 +111,8 @@ def login_and_save() -> list[dict]:
 if __name__ == '__main__':
     try:
         login_and_save()
-        print_blank_line_and_delay()
+        tools.print_blank_line_and_delay()
         input('程序正常结束，按回车键退出：')
     except RuntimeError:
-        print_blank_line_and_delay()
+        tools.print_blank_line_and_delay()
         input('程序遇到错误，请阅读上方红色红字提示后按回车键终止程序：')
