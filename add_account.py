@@ -1,11 +1,10 @@
 import json
 import time
+import httpx
 from json.decoder import JSONDecodeError
-
-import requests
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
-
+from selenium.common.exceptions import NoSuchDriverException, SessionNotCreatedException
 from common import stokenUrl, get_Nickname, print_blank_line
 from log_config import log
 
@@ -14,9 +13,9 @@ def get_permit_cookie() -> dict:
     """获取米哈游通行证的cookie"""
     log.info('正在启动Edge浏览器...')
     edge_options = webdriver.EdgeOptions()
-    edge_options.add_experimental_option('excludeSwitches', ['enable-automation', 'enable-logging'])
+    edge_options.add_experimental_option('excludeSwitches', ['enable-logging'])
     wd = webdriver.Edge(service=Service(r'./msedgedriver.exe'), options=edge_options)
-    wd.get('https://user.mihoyo.com/')
+    wd.get('https://user.mihoyo.com/#/login/captcha')
     log.info('浏览器启动成功，请登录米哈游通行证...')
     # 检测用户是否登录了
     while True:
@@ -25,10 +24,7 @@ def get_permit_cookie() -> dict:
             break
     web_cookie = wd.get_cookies()
     wd.quit()
-    permit_cookie = {}
-    for ck in web_cookie:
-        k, v = ck['name'], ck['value']
-        permit_cookie[k] = v
+    permit_cookie = {ck['name']: ck['value'] for ck in web_cookie}
     log.info('获取米哈游通行证cookie成功！')
     return permit_cookie
 
@@ -37,8 +33,8 @@ def get_user_info(permit_cookie) -> dict:
     """通过米哈游通行证cookie获取用户信息"""
     log.info('获取用户信息中...')
     user_info = {'stuid': permit_cookie['login_uid']}
-    resp = requests.get(url=stokenUrl.format(permit_cookie['login_ticket'], user_info['stuid']))
-    data = json.loads(resp.text.encode('utf-8'))
+    resp = httpx.get(url=stokenUrl.format(permit_cookie['login_ticket'], user_info['stuid']))
+    data = resp.json()
     if data['retcode'] == 0:
         user_info['stoken'] = data['data']['list'][0]['token']
         log.info('用户信息获取成功！')
@@ -68,7 +64,7 @@ def save_user_info(info) -> list[dict]:
     log.info(f'正在将【{nickname}】的用户信息保存到“user_info”文件...')
     data = []
     try:
-        with open('./user_info.json', 'r') as f:
+        with open('./data/user_info.json', 'r') as f:
             log.info('检测到“user_info”文件已存在，正在读取文件原内容...')
             data = json.load(f)
     except FileNotFoundError:
@@ -89,18 +85,23 @@ def save_user_info(info) -> list[dict]:
                 break
     if not cookie_repeated:
         data.append(info)
-    with open('./user_info.json', 'w') as f:
+    with open('./data/user_info.json', 'w') as f:
         json.dump(data, f)
     log.info('保存成功！')
     return data
 
 
 def login_and_save() -> list[dict]:
-    permit_cookie = get_permit_cookie()
-    print_blank_line()
-    user_ck = get_user_info(permit_cookie)
-    print_blank_line()
-    return save_user_info(user_ck)
+    try:
+        permit_cookie = get_permit_cookie()
+        print_blank_line()
+        user_ck = get_user_info(permit_cookie)
+        print_blank_line()
+        return save_user_info(user_ck)
+    except NoSuchDriverException:
+        log.error('缺失msedgedriver.exe文件')
+    except SessionNotCreatedException:
+        log.error('msedgedriver.exe的版本与浏览器不兼容')
 
 
 if __name__ == '__main__':

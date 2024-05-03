@@ -1,15 +1,14 @@
-import json
 import time
 import random
+import httpx
 from hashlib import md5
 from log_config import log
 
-import requests
 
 # 米游社版本及对应的salt
-mysVersion = '2.34.1'
-salt_K2 = 'z8DRIUjNDT7IT5IZXvrUAxyupA1peND9'  # 米游社2.34.1版本安卓客户端salt值
-salt_6X = 't0qEgfub6cvueAPgR5m9aQWWVciEer7v'  # 这个给签到用
+mysVersion = '2.67.1'
+salt_K2 = 'yajbb9O8TgQYOW7JVZYfUJhXN7mAeZPE'
+salt_6X = 't0qEgfub6cvueAPgR5m9aQWWVciEer7v'
 client_type = '2'  # 1:ios 2:android
 
 
@@ -122,8 +121,8 @@ def get_DS2(body: str = '', query: str = '') -> str:
 
 def get_Nickname(stuid: str) -> str:
     """获取米游社昵称"""
-    res = requests.get(url=nicknameUrl.format(stuid))
-    data = json.loads(res.text.encode('utf-8'))
+    resp = httpx.get(url=nicknameUrl.format(stuid))
+    data = resp.json()
     if data['retcode'] == 0:
         return data['data']['user_info']['nickname']
     else:

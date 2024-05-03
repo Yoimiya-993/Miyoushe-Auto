@@ -1,5 +1,5 @@
+import json
 from json.decoder import JSONDecodeError
-
 from common import *
 from log_config import log
 from add_account import login_and_save
@@ -9,7 +9,7 @@ def load_user() -> list[dict]:
     """加载用户"""
     log.info('正在读取“user_info”文件...')
     try:
-        with open('./user_info.json', 'r') as f:
+        with open('./data/user_info.json', 'r') as f:
             data = json.load(f)
             log.info(f'“user_info”文件读取完毕，共有{len(data)}个账号！')
             return data
@@ -19,7 +19,7 @@ def load_user() -> list[dict]:
         log.info('账号添加成功！')
         return users
     except JSONDecodeError:
-        log.error('文件“user_info.json”读取失败，请不要改动文件内容！如有改动，请删除原文件再重新登录之前存储过的用户')
+        log.error('“user_info”文件读取失败，请不要改动文件内容！若你无法还原，请删除该文件再重新添加保存过的账号')
         raise RuntimeError
 
 
@@ -35,14 +35,14 @@ class MiYouBiTask:
             'DS': get_DS1(),
             'x-rpc-client_type': client_type,
             'x-rpc-app_version': mysVersion,
-            'x-rpc-sys_version': '6.0.1',
+            'x-rpc-sys_version': '12',
             'x-rpc-channel': 'miyousheluodi',
-            'x-rpc-device_id': random_str(32),
-            'x-rpc-device_name': random_str(random.randint(1, 10)),
-            'x-rpc-device_model': 'Mi 10',
+            'x-rpc-device_id': uuid.uuid4().__str__().upper(),
+            'x-rpc-device_name': 'HONOR BKL-TL10',
+            'x-rpc-device_model': 'BKL-TL10',
             'Referer': 'https://app.mihoyo.com',
             'Host': 'bbs-api.mihoyo.com',
-            'User-Agent': 'okhttp/4.8.0'
+            'User-Agent': 'okhttp/4.9.3'
         }
         self.da_bie_ye = channelList[4]
         self.nickname = get_Nickname(user['stuid'])
@@ -51,14 +51,14 @@ class MiYouBiTask:
 
     def verifyStoken(self):
         """验证stoken的有效性"""
-        log.info(f'正在验证用户[{self.nickname}]的登录状态...')
-        resp = requests.get(url=verifyUrl, cookies=self.user)
-        data = json.loads(resp.text.encode('utf-8'))
+        log.info(f'正在验证用户 {self.nickname} 的登录状态...')
+        resp = httpx.get(url=verifyUrl, cookies=self.user)
+        data = resp.json()
         if data['retcode'] == -100:
-            log.error(f'[{self.nickname}]的{data["message"]}')
+            log.error(f'{self.nickname} 的{data["message"]}')
             raise RuntimeError
         else:
-            log.info(f'[{self.nickname}]的登录状态正常！')
+            log.info(f'{self.nickname} 的登录状态正常！')
 
     def getArticleList(self) -> list[dict]:
         """预获取【大别野】的帖子以供 浏览、点赞、分享 使用
@@ -68,8 +68,8 @@ class MiYouBiTask:
         """
         articles = []
         log.info('正在获取5个【大别野】的帖子...')
-        resp = requests.get(url=listUrl.format(self.da_bie_ye['forumId']), headers=self.headers)
-        data = json.loads(resp.text.encode('utf-8'))
+        resp = httpx.get(url=listUrl.format(self.da_bie_ye['forumId']), headers=self.headers)
+        data = resp.json()
         if data['retcode'] == 0:
             for i in range(5):
                 articles.append({
@@ -78,7 +78,7 @@ class MiYouBiTask:
                 })
             log.info('获取成功！')
         else:
-            log.error(f'获取失败, 原因：{data["message"]}')
+            log.error(f'获取失败, 原因：{data}')
             raise RuntimeError
         time.sleep(2)
         return articles
@@ -87,13 +87,13 @@ class MiYouBiTask:
         """浏览3个【大别野】帖子"""
         log.info('正在看帖...')
         for i in range(3):
-            resp = requests.get(url=detailUrl.format(self.articleList[i]['post_id']),
-                               cookies=self.user, headers=self.headers)
-            data = json.loads(resp.text.encode('utf-8'))
+            resp = httpx.get(url=detailUrl.format(self.articleList[i]['post_id']),
+                             cookies=self.user, headers=self.headers)
+            data = resp.json()
             if data['retcode'] == 0:
-                log.info(f'看帖《{self.articleList[i]["subject"]}》成功！')
+                log.info(f'看帖 {self.articleList[i]["subject"]} 成功！')
             else:
-                log.error(f'看帖《{self.articleList[i]["subject"]}》失败，原因：{data["message"]}')
+                log.error(f'看帖 {self.articleList[i]["subject"]} 失败，原因：{data}')
                 raise RuntimeError
             time.sleep(2)
 
@@ -101,26 +101,26 @@ class MiYouBiTask:
         """给5个【大别野】帖子点赞"""
         log.info('正在点赞...')
         for i in range(5):
-            resp = requests.post(url=voteUrl, cookies=self.user, headers=self.headers,
-                                json={'post_id': self.articleList[i]['post_id'], 'is_cancel': False})
-            data = json.loads(resp.text.encode('utf-8'))
+            resp = httpx.post(url=voteUrl, cookies=self.user, headers=self.headers,
+                              json={'post_id': self.articleList[i]['post_id'], 'is_cancel': False})
+            data = resp.json()
             if data['retcode'] == 0:
-                log.info(f'点赞《{self.articleList[i]["subject"]}》成功！')
+                log.info(f'点赞 {self.articleList[i]["subject"]} 成功！')
             else:
-                log.error(f'点赞《{self.articleList[i]["subject"]}》失败，原因：{data["message"]}')
+                log.error(f'点赞 {self.articleList[i]["subject"]} 失败，原因：{data}')
                 raise RuntimeError
             time.sleep(2)
 
     def share(self):
         """分享1个【大别野】帖子"""
         log.info('正在分享...')
-        req = requests.get(url=shareUrl.format(self.articleList[0]['post_id']),
-                           cookies=self.user, headers=self.headers)
-        data = json.loads(req.text.encode('utf-8'))
+        resp = httpx.get(url=shareUrl.format(self.articleList[0]['post_id']),
+                         cookies=self.user, headers=self.headers)
+        data = resp.json()
         if data['retcode'] == 0:
-            log.info(f'分享《{self.articleList[0]["subject"]}》成功！')
+            log.info(f'分享 {self.articleList[0]["subject"]} 成功！')
         else:
-            log.error(f'分享《{self.articleList[0]["subject"]}》失败，原因：{data["message"]}')
+            log.error(f'分享 {self.articleList[0]["subject"]} 失败，原因：{data}')
             raise RuntimeError
         time.sleep(2)
 
@@ -128,15 +128,15 @@ class MiYouBiTask:
         """【大别野】打卡"""
         log.info('正在打卡...')
         self.headers['DS'] = get_DS2(json.dumps({'gids': self.da_bie_ye['id']}), '')
-        req = requests.post(url=signUrl, json={'gids': self.da_bie_ye['id']},
-                            cookies=self.user, headers=self.headers)
-        data = json.loads(req.text.encode('utf-8'))
+        resp = httpx.post(url=signUrl, json={'gids': self.da_bie_ye['id']},
+                          cookies=self.user, headers=self.headers)
+        data = resp.json()
         if data['retcode'] == 0:
-            log.info(f'【{self.da_bie_ye["name"]}】打卡成功！')
+            log.info(f'【大别野】打卡成功！')
         elif data['retcode'] == 1034:
-            log.error(f'【{self.da_bie_ye["name"]}】打卡失败，原因：遇到验证码，请使用米游社手动打卡')
+            log.error(f'【大别野】打卡失败，原因：遇到验证码，请使用米游社APP手动打卡')
         else:
-            log.error(f'【{self.da_bie_ye["name"]}】打卡失败，原因：{data["message"]}')
+            log.error(f'【大别野】打卡失败，原因：{data}')
             raise RuntimeError
 
 
