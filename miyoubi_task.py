@@ -32,7 +32,8 @@ class MiYouBiTask:
     因此只需对【大别野】进行 打卡、浏览、点赞、分享
     """
     def __init__(self, user: dict):
-        self.cookie = api.change_cookie_by_stoken_version(user['uid'], user['stoken'], user['mid'])
+        mid = user['mid'] if 'mid' in user else ''
+        self.cookie = api.change_cookie_by_stoken_version(user['uid'], user['stoken'], mid)
         self.req = get_new_session()
         self.req.headers.update({
             'DS': api.get_DS1(),
