@@ -32,7 +32,7 @@ class MiYouBiTask:
     因此只需对【大别野】进行 打卡、浏览、点赞、分享
     """
     def __init__(self, user: dict):
-        self.user = user
+        self.cookie = api.change_cookie_by_stoken_version(user['uid'], user['stoken'], user['mid'])
         self.req = get_new_session()
         self.req.headers.update({
             'DS': api.get_DS1(),
@@ -54,7 +54,7 @@ class MiYouBiTask:
     def verifyStoken(self):
         """验证stoken的有效性"""
         log.info(f'正在验证用户 {self.nickname} 的登录状态...')
-        resp = http.get(url=api.verifyUrl, cookies=self.user)
+        resp = http.get(url=api.verifyUrl, cookies=self.cookie)
         data = resp.json()
         if data['retcode'] == -100:
             log.error(f'{self.nickname} 的{data["message"]}')
@@ -90,7 +90,7 @@ class MiYouBiTask:
         log.info('正在看帖...')
         for i in range(3):
             resp = self.req.get(url=api.detailUrl.format(self.articleList[i]['post_id']),
-                                cookies=self.user)
+                                cookies=self.cookie)
             data = resp.json()
             if data['retcode'] == 0:
                 log.info(f'看帖 {self.articleList[i]["subject"]} 成功！')
@@ -103,7 +103,7 @@ class MiYouBiTask:
         """给5个【大别野】帖子点赞"""
         log.info('正在点赞...')
         for i in range(5):
-            resp = self.req.post(url=api.voteUrl, cookies=self.user,
+            resp = self.req.post(url=api.voteUrl, cookies=self.cookie,
                                  json={'post_id': self.articleList[i]['post_id'], 'is_cancel': False})
             data = resp.json()
             if data['retcode'] == 0:
@@ -117,7 +117,7 @@ class MiYouBiTask:
         """分享1个【大别野】帖子"""
         log.info('正在分享...')
         resp = self.req.get(url=api.shareUrl.format(self.articleList[0]['post_id']),
-                            cookies=self.user)
+                            cookies=self.cookie)
         data = resp.json()
         if data['retcode'] == 0:
             log.info(f'分享 {self.articleList[0]["subject"]} 成功！')
@@ -131,15 +131,12 @@ class MiYouBiTask:
         log.info('正在打卡...')
         self.req.headers['DS'] = api.get_DS2(json.dumps({'gids': self.da_bie_ye['id']}))
         resp = self.req.post(url=api.signUrl, json={'gids': self.da_bie_ye['id']},
-                             cookies=self.user)
+                             cookies=self.cookie)
         data = resp.json()
         if data['retcode'] == 0:
             log.info(f'【大别野】打卡成功！')
-        elif data['retcode'] == 1034:
-            log.error(f'【大别野】打卡失败，原因：遇到验证码，请使用米游社APP手动打卡')
         else:
             log.error(f'【大别野】打卡失败，原因：{data}')
-            raise RuntimeError
 
 
 def do_myb_task():
@@ -147,20 +144,19 @@ def do_myb_task():
     tools.print_blank_line_and_delay()
     log.info('开始执行米游币任务...')
     for i in range(len(user_list)):
-        tools.print_blank_line_and_delay()
-        log.info(f'==开始第{i+1}个账号的米游币任务==')
-        myb_task = MiYouBiTask(user_list[i])
-        myb_task.readArticle()
-        myb_task.upVote()
-        myb_task.share()
-        myb_task.signIn()
+        try:
+            tools.print_blank_line_and_delay()
+            log.info(f'==开始第{i + 1}个账号的米游币任务==')
+            myb_task = MiYouBiTask(user_list[i])
+            myb_task.readArticle()
+            myb_task.upVote()
+            myb_task.share()
+            myb_task.signIn()
+        except RuntimeError:
+            continue
 
 
 if __name__ == '__main__':
-    try:
-        do_myb_task()
-        tools.print_blank_line_and_delay()
-        input('米游币任务已全部执行完毕，请核对以上日志信息，确认无误按回车键退出：')
-    except RuntimeError:
-        tools.print_blank_line_and_delay()
-        input('程序遇到错误，请阅读上方红色红字提示后按回车键终止程序：')
+    do_myb_task()
+    tools.print_blank_line_and_delay()
+    input('米游币任务已全部执行完毕，请核对以上日志信息，确认无误按回车键退出：')

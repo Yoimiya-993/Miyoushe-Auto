@@ -186,3 +186,13 @@ def get_stoken_by_game_token(uid: int, game_token: str):
     else:
         log.error(f'获取stoken和mid失败，原因：{data}')
         return None, None
+
+
+def change_cookie_by_stoken_version(uid: str, stoken: str, mid: str):
+    """
+    根据stoken的版本来使用不同的cookie
+    :return: v1：stoken+stuid，v2：stoken+mid
+    """
+    if stoken.startswith('v2_'):
+        return {'stoken': stoken, 'mid': mid}
+    return {'stoken': stoken, 'stuid': uid}
