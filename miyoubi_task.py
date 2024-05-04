@@ -1,12 +1,11 @@
 import json
-import uuid
 import time
-import requests
 import tools
 import api
 from json.decoder import JSONDecodeError
 from log_config import log
-from add_account import login_and_save
+from add_account import add_account_by_scan_qrcode
+from request import http, get_new_session
 
 
 def load_user() -> list[dict]:
@@ -18,10 +17,9 @@ def load_user() -> list[dict]:
             log.info(f'“user_info”文件读取完毕，共有{len(data)}个账号！')
             return data
     except FileNotFoundError:
-        log.info('”user_info“文件不存在，请添加第一个账号...')
-        users = login_and_save()
-        log.info('账号添加成功！')
-        return users
+        log.info('”user_info“文件不存在，请添加一个账号以开始米游币任务')
+        # return add_account_by_browser()
+        return add_account_by_scan_qrcode()
     except JSONDecodeError:
         log.error('“user_info”文件读取失败，请不要改动文件内容！若你无法还原，请删除该文件再重新添加保存过的账号')
         raise RuntimeError
@@ -35,28 +33,28 @@ class MiYouBiTask:
     """
     def __init__(self, user: dict):
         self.user = user
-        self.headers = {
+        self.req = get_new_session()
+        self.req.headers.update({
             'DS': api.get_DS1(),
             'x-rpc-client_type': api.client_type,
             'x-rpc-app_version': api.mysVersion,
             'x-rpc-sys_version': '12',
             'x-rpc-channel': 'miyousheluodi',
-            'x-rpc-device_id': uuid.uuid4().__str__().upper(),
-            'x-rpc-device_name': 'HONOR BKL-TL10',
-            'x-rpc-device_model': 'BKL-TL10',
+            'x-rpc-device_id': api.device_id,
+            'x-rpc-device_name': 'HUAWEI LIO-AN00',
+            'x-rpc-device_model': 'LIO-AN00',
             'Referer': 'https://app.mihoyo.com',
-            'Host': 'bbs-api.mihoyo.com',
-            'User-Agent': 'okhttp/4.9.3'
-        }
+            'Host': 'bbs-api.mihoyo.com'
+        })
         self.da_bie_ye = api.channelList[4]
-        self.nickname = api.get_nickname(user['stuid'])
+        self.nickname = api.get_bbs_nickname(user['uid'])
         self.verifyStoken()
         self.articleList = self.getArticleList()
 
     def verifyStoken(self):
         """验证stoken的有效性"""
         log.info(f'正在验证用户 {self.nickname} 的登录状态...')
-        resp = requests.get(url=api.verifyUrl, cookies=self.user)
+        resp = http.get(url=api.verifyUrl, cookies=self.user)
         data = resp.json()
         if data['retcode'] == -100:
             log.error(f'{self.nickname} 的{data["message"]}')
@@ -72,7 +70,7 @@ class MiYouBiTask:
         """
         articles = []
         log.info('正在获取5个【大别野】的帖子...')
-        resp = requests.get(url=api.listUrl.format(self.da_bie_ye['forumId']), headers=self.headers)
+        resp = self.req.get(url=api.listUrl.format(self.da_bie_ye['forumId']))
         data = resp.json()
         if data['retcode'] == 0:
             for i in range(5):
@@ -91,8 +89,8 @@ class MiYouBiTask:
         """浏览3个【大别野】帖子"""
         log.info('正在看帖...')
         for i in range(3):
-            resp = requests.get(url=api.detailUrl.format(self.articleList[i]['post_id']),
-                             cookies=self.user, headers=self.headers)
+            resp = self.req.get(url=api.detailUrl.format(self.articleList[i]['post_id']),
+                                cookies=self.user)
             data = resp.json()
             if data['retcode'] == 0:
                 log.info(f'看帖 {self.articleList[i]["subject"]} 成功！')
@@ -105,8 +103,8 @@ class MiYouBiTask:
         """给5个【大别野】帖子点赞"""
         log.info('正在点赞...')
         for i in range(5):
-            resp = requests.post(url=api.voteUrl, cookies=self.user, headers=self.headers,
-                              json={'post_id': self.articleList[i]['post_id'], 'is_cancel': False})
+            resp = self.req.post(url=api.voteUrl, cookies=self.user,
+                                 json={'post_id': self.articleList[i]['post_id'], 'is_cancel': False})
             data = resp.json()
             if data['retcode'] == 0:
                 log.info(f'点赞 {self.articleList[i]["subject"]} 成功！')
@@ -118,8 +116,8 @@ class MiYouBiTask:
     def share(self):
         """分享1个【大别野】帖子"""
         log.info('正在分享...')
-        resp = requests.get(url=api.shareUrl.format(self.articleList[0]['post_id']),
-                         cookies=self.user, headers=self.headers)
+        resp = self.req.get(url=api.shareUrl.format(self.articleList[0]['post_id']),
+                            cookies=self.user)
         data = resp.json()
         if data['retcode'] == 0:
             log.info(f'分享 {self.articleList[0]["subject"]} 成功！')
@@ -131,9 +129,9 @@ class MiYouBiTask:
     def signIn(self):
         """【大别野】打卡"""
         log.info('正在打卡...')
-        self.headers['DS'] = api.get_DS2(json.dumps({'gids': self.da_bie_ye['id']}), '')
-        resp = requests.post(url=api.signUrl, json={'gids': self.da_bie_ye['id']},
-                          cookies=self.user, headers=self.headers)
+        self.req.headers['DS'] = api.get_DS2(json.dumps({'gids': self.da_bie_ye['id']}))
+        resp = self.req.post(url=api.signUrl, json={'gids': self.da_bie_ye['id']},
+                             cookies=self.user)
         data = resp.json()
         if data['retcode'] == 0:
             log.info(f'【大别野】打卡成功！')
@@ -150,7 +148,7 @@ def do_myb_task():
     log.info('开始执行米游币任务...')
     for i in range(len(user_list)):
         tools.print_blank_line_and_delay()
-        log.warning(f'==开始第{i+1}个账号的米游币任务==')
+        log.info(f'==开始第{i+1}个账号的米游币任务==')
         myb_task = MiYouBiTask(user_list[i])
         myb_task.readArticle()
         myb_task.upVote()

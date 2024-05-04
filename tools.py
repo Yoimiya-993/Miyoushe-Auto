@@ -1,4 +1,5 @@
 import time
+from qrcode import QRCode
 
 
 def print_blank_line_and_delay():
@@ -10,3 +11,11 @@ def print_blank_line_and_delay():
     time.sleep(0.5)
     print()
     time.sleep(0.5)
+
+
+def generate_qrcode_image(data):
+    """生成二维码图片"""
+    qr = QRCode(box_size=4)
+    qr.add_data(data)
+    qr.make(fit=True)
+    return qr.make_image(fill_color='black', back_color='white')

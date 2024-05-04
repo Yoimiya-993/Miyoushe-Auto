@@ -1,15 +1,21 @@
 import time
 import random
-import requests
+import uuid
+import re
+import json
+import constant
 from hashlib import md5
 from log_config import log
+from request import http, get_new_session
 
 
-# 米游社版本及对应的salt
+# 米游社版本与对应的salt，以及一些固定值
 mysVersion = '2.67.1'
 salt_K2 = 'yajbb9O8TgQYOW7JVZYfUJhXN7mAeZPE'
 salt_6X = 't0qEgfub6cvueAPgR5m9aQWWVciEer7v'
 client_type = '2'  # 1:ios 2:android
+device_id = uuid.uuid4().__str__().upper()
+bbs_app_id = 'bll8iq97cem8'
 
 
 # 米游社API
@@ -36,6 +42,15 @@ shareUrl = 'https://bbs-api.mihoyo.com/apihub/api/getShareConf?entity_id={}&enti
 
 voteUrl = 'https://bbs-api.mihoyo.com/apihub/sapi/upvotePost'
 """点赞帖子 URL"""
+
+url_FetchQrcode = 'https://hk4e-sdk.mihoyo.com/hk4e_cn/combo/panda/qrcode/fetch'
+"""生成二维码"""
+
+url_QueryQrcode = 'https://hk4e-sdk.mihoyo.com/hk4e_cn/combo/panda/qrcode/query'
+"""查询二维码状态"""
+
+url_GetSTokenByGameToken = 'https://api-takumi.mihoyo.com/account/ma-cn-session/app/getTokenByGameToken'
+"""通过Game Token获取SToken"""
 
 
 # 米游社 频道-板块 ID对照表
@@ -116,12 +131,58 @@ def get_DS2(body: str = '', query: str = '') -> str:
     return f'{t},{r},{ds}'
 
 
-def get_nickname(stuid: str) -> str:
+def get_bbs_nickname(uid: str) -> str:
     """获取米游社昵称"""
-    resp = requests.get(url=nicknameUrl.format(stuid))
+    resp = http.get(url=nicknameUrl.format(uid))
     data = resp.json()
     if data['retcode'] == 0:
         return data['data']['user_info']['nickname']
     else:
-        log.error(f'米游社昵称获取失败，原因：{data["message"]}')
+        log.error(f'米游社昵称获取失败，原因：{data}')
         raise RuntimeError
+
+
+def fetch_qrcode(app_id: str):
+    """生成二维码"""
+    resp = http.post(url_FetchQrcode, json={'app_id': app_id, 'device': device_id})
+    data = resp.json()
+    if data['retcode'] == 0:
+        url = data['data']['url']
+        ticket = re.search(r'ticket=((\d|[a-f])+)', url).group(1)
+        return url, ticket
+    else:
+        return None, data
+
+
+def query_qrcode_status(app_id: str, ticket: str):
+    """查询二维码扫描状态"""
+    resp = http.post(url_QueryQrcode, json={'app_id': app_id, 'device': device_id, 'ticket': ticket})
+    data = resp.json()
+    if data['retcode'] == -106:
+        return constant.QRCODE_EXPIRED, None
+    data = data['data']
+    if data['stat'] == constant.QRCODE_CONFIRMED:
+        return constant.QRCODE_CONFIRMED, json.loads(data['payload']['raw'])
+    return None, None
+
+
+def get_stoken_by_game_token(uid: int, game_token: str):
+    """通过Game Token获取SToken"""
+    header = {
+        'Host': 'api-takumi.mihoyo.com',
+        'Referer': 'https://app.mihoyo.com',
+        'Origin': 'https://api-takumi.mihoyo.com',
+        'User-Agent': f'Mozilla/5.0 (Linux; Android 12; LIO-AN00 Build/TKQ1.220829.002; wv) AppleWebKit/537.36 '
+                      f'(KHTML, like Gecko) Version/4.0 Chrome/103.0.5060.129 Mobile Safari/537.36 miHoYoBBS/{mysVersion}',
+        'x-rpc-app_id': bbs_app_id
+    }
+    req = get_new_session()
+    resp = req.post(url_GetSTokenByGameToken,
+                    headers=header, json={'account_id': uid, 'game_token': game_token})
+    data = resp.json()
+    if data['retcode'] == 0:
+        log.info('获取stoken和mid成功')
+        return data['data']['token']['token'], data['data']['user_info']['mid']
+    else:
+        log.error(f'获取stoken和mid失败，原因：{data}')
+        return None, None
