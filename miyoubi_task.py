@@ -144,6 +144,7 @@ def do_myb_task():
     user_list = load_user()
     tools.print_blank_line_and_delay()
     log.info('开始执行米游币任务...')
+    success_num = 0
     for i in range(len(user_list)):
         try:
             tools.print_blank_line_and_delay()
@@ -153,11 +154,17 @@ def do_myb_task():
             myb_task.upVote()
             myb_task.share()
             myb_task.signIn()
+            success_num += 1
         except RuntimeError:
             continue
+    return success_num == len(user_list)
 
 
 if __name__ == '__main__':
-    do_myb_task()
+    all_finish = do_myb_task()
     tools.print_blank_line_and_delay()
-    input('米游币任务已全部执行完毕，请核对以上日志信息，确认无误按回车键退出：')
+    if all_finish:
+        print('所有账号的米游币任务已全部完成！')
+    else:
+        input('有账号的米游币任务未全部完成，详情请看上面的日志信息')
+

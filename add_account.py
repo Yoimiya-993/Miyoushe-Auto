@@ -8,31 +8,31 @@ import api
 import constant
 from PIL import ImageTk
 from json.decoder import JSONDecodeError
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
-from selenium.common.exceptions import NoSuchDriverException, SessionNotCreatedException
+# from selenium import webdriver
+# from selenium.webdriver.chrome.service import Service
+# from selenium.common.exceptions import NoSuchDriverException, SessionNotCreatedException
 from log_config import log
 from request import http
 
 
-def get_permit_cookie() -> dict:
-    """获取米哈游通行证的cookie"""
-    log.info('正在启动Edge浏览器...')
-    edge_options = webdriver.EdgeOptions()
-    edge_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-    wd = webdriver.Edge(service=Service(r'./msedgedriver.exe'), options=edge_options)
-    wd.get('https://user.mihoyo.com/#/login/captcha')
-    log.info('浏览器启动成功，请登录米哈游通行证...')
-    # 检测用户是否登录了
-    while True:
-        time.sleep(1)
-        if wd.current_url == 'https://user.mihoyo.com/#/account/home':
-            break
-    web_cookie = wd.get_cookies()
-    wd.quit()
-    permit_cookie = {ck['name']: ck['value'] for ck in web_cookie}
-    log.info('获取米哈游通行证login_ticket成功！')
-    return permit_cookie
+# def get_permit_cookie() -> dict:
+#     """获取米哈游通行证的cookie"""
+#     log.info('正在启动Edge浏览器...')
+#     edge_options = webdriver.EdgeOptions()
+#     edge_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+#     wd = webdriver.Edge(service=Service(r'./msedgedriver.exe'), options=edge_options)
+#     wd.get('https://user.mihoyo.com/#/login/captcha')
+#     log.info('浏览器启动成功，请登录米哈游通行证...')
+#     # 检测用户是否登录了
+#     while True:
+#         time.sleep(1)
+#         if wd.current_url == 'https://user.mihoyo.com/#/account/home':
+#             break
+#     web_cookie = wd.get_cookies()
+#     wd.quit()
+#     permit_cookie = {ck['name']: ck['value'] for ck in web_cookie}
+#     log.info('获取米哈游通行证login_ticket成功！')
+#     return permit_cookie
 
 
 def get_user_info(permit_cookie) -> dict:
