@@ -8,11 +8,11 @@ import api
 import constant
 from PIL import ImageTk
 from json.decoder import JSONDecodeError
+from log_config import log
 # from selenium import webdriver
 # from selenium.webdriver.chrome.service import Service
 # from selenium.common.exceptions import NoSuchDriverException, SessionNotCreatedException
-from log_config import log
-from request import http
+# from request import http
 
 
 # def get_permit_cookie() -> dict:
@@ -35,19 +35,19 @@ from request import http
 #     return permit_cookie
 
 
-def get_user_info(permit_cookie) -> dict:
-    """通过米哈游通行证cookie获取用户信息"""
-    log.info('正在通过login_ticket获取stoken...')
-    user_info = {'uid': permit_cookie['login_uid']}
-    resp = http.get(url=api.stokenUrl.format(permit_cookie['login_ticket'], user_info['uid']))
-    data = resp.json()
-    if data['retcode'] == 0:
-        user_info['stoken'] = data['data']['list'][0]['token']
-        log.info('获取stoken成功！')
-    else:
-        log.error(f'获取stoken失败，原因：{data["message"]}')
-        raise RuntimeError
-    return user_info
+# def get_user_info(permit_cookie) -> dict:
+#     """通过米哈游通行证cookie获取用户信息"""
+#     log.info('正在通过login_ticket获取stoken...')
+#     user_info = {'uid': permit_cookie['login_uid']}
+#     resp = http.get(url=api.stokenUrl.format(permit_cookie['login_ticket'], user_info['uid']))
+#     data = resp.json()
+#     if data['retcode'] == 0:
+#         user_info['stoken'] = data['data']['list'][0]['token']
+#         log.info('获取stoken成功！')
+#     else:
+#         log.error(f'获取stoken失败，原因：{data["message"]}')
+#         raise RuntimeError
+#     return user_info
 
 
 def save_user_info(info) -> list[dict[str, str]]:
@@ -88,17 +88,17 @@ def save_user_info(info) -> list[dict[str, str]]:
     return data
 
 
-def add_account_by_browser() -> list[dict[str, str]]:
-    try:
-        permit_cookie = get_permit_cookie()
-        user_ck = get_user_info(permit_cookie)
-        return save_user_info(user_ck)
-    except NoSuchDriverException:
-        log.error('缺失msedgedriver.exe文件')
-        raise RuntimeError
-    except SessionNotCreatedException:
-        log.error('msedgedriver.exe的版本与浏览器不兼容')
-        raise RuntimeError
+# def add_account_by_browser() -> list[dict[str, str]]:
+#     try:
+#         permit_cookie = get_permit_cookie()
+#         user_ck = get_user_info(permit_cookie)
+#         return save_user_info(user_ck)
+#     except NoSuchDriverException:
+#         log.error('缺失msedgedriver.exe文件')
+#         raise RuntimeError
+#     except SessionNotCreatedException:
+#         log.error('msedgedriver.exe的版本与浏览器不兼容')
+#         raise RuntimeError
 
 
 def add_account_by_scan_qrcode():
@@ -178,4 +178,4 @@ if __name__ == '__main__':
             input('回车继续添加账号，要退出直接关闭程序')
     except RuntimeError:
         tools.print_blank_line_and_delay()
-        input('程序遇到错误，请阅读上方红色红字提示后按回车键终止程序：')
+        input('程序遇到错误，上方红字日志信息即为报错内容：')
