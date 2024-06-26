@@ -174,8 +174,8 @@ if __name__ == '__main__':
         # add_account_by_browser()
         while True:
             add_account_by_scan_qrcode()
-            tools.print_blank_line_and_delay()
+            tools.delay_print_blank_line()
             input('回车继续添加账号，要退出直接关闭程序')
     except RuntimeError:
-        tools.print_blank_line_and_delay()
+        tools.delay_print_blank_line()
         input('程序遇到错误，上方红字日志信息即为报错内容：')

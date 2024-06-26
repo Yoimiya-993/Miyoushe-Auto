@@ -1,10 +1,10 @@
 import json
+import sys
 import time
 import tools
 import api
 from json.decoder import JSONDecodeError
 from log_config import log
-from add_account import add_account_by_scan_qrcode
 from request import http, get_new_session
 
 
@@ -17,12 +17,13 @@ def load_user() -> list[dict]:
             log.info(f'“user_info”文件读取完毕，共有{len(data)}个账号！')
             return data
     except FileNotFoundError:
-        log.info('”user_info“文件不存在，请添加一个账号以开始米游币任务')
-        # return add_account_by_browser()
-        return add_account_by_scan_qrcode()
+        log.error('”user_info“文件不存在，请先添加账号！')
+        input('回车退出程序')
+        sys.exit(0)
     except JSONDecodeError:
         log.error('“user_info”文件读取失败，请不要改动文件内容！若你无法还原，请删除该文件再重新添加保存过的账号')
-        raise RuntimeError
+        input('回车退出程序')
+        sys.exit(0)
 
 
 class MiYouBiTask:
@@ -142,12 +143,12 @@ class MiYouBiTask:
 
 def do_myb_task():
     user_list = load_user()
-    tools.print_blank_line_and_delay()
+    tools.delay_print_blank_line()
     log.info('开始执行米游币任务...')
     success_num = 0
     for i in range(len(user_list)):
         try:
-            tools.print_blank_line_and_delay()
+            tools.delay_print_blank_line()
             log.info(f'==开始第{i + 1}个账号的米游币任务==')
             myb_task = MiYouBiTask(user_list[i])
             myb_task.readArticle()
@@ -162,7 +163,7 @@ def do_myb_task():
 
 if __name__ == '__main__':
     all_finish = do_myb_task()
-    tools.print_blank_line_and_delay()
+    tools.delay_print_blank_line()
     if all_finish:
         print('所有账号的米游币任务已全部完成！')
     else:
